@@ -52,26 +52,18 @@ flowchart LR
 
 代码文件平铺在仓库根目录，**没有包目录**：
 
-| 文件 | 类型 | 职责 |
-|---|---|---|
-| `main.py` | 编排 | CLI 与主循环 |
-| `pipeline.py` | 编排 | 单次运行；唯一同时接触纯模块与 I/O 模块的文件 |
-| `models.py` | 纯 | 数据模型、4 个 `Protocol`、`Deps`、`StageError` |
-| `config.py` | 纯 | 配置加载与校验 |
-| `clock.py` | I/O | NTP 校时，`monotonic` 基准 |
-| `scheduler.py` | 纯 | 触发判定与 `state.json` 去重 |
-| `feishu_source.py` | I/O | 飞书全表读入内存 |
-| `render.py` | 纯 | 表格 → Markdown 上下文 |
-| `analysis.py` | 纯 | 任务归一化与危险判定 |
-| `blocks.py` | 纯 | 标题与风险块排版 |
-| `agent.py` | I/O | LLM 生成全局要点 |
-| `splitter.py` | 纯 | 分条与 Markdown 压平 |
-| `napcat.py` | I/O | OneBot HTTP、名称解析、成员匹配 |
-| `napcat_admin.py` | I/O | 推送 NapCat `httpServers` |
-| `reporter.py` | I/O | 日志 → 管理员 |
-| `selftest.py` | 测试 | `unittest` 发现入口 |
+| 文件 | 职责 |
+|---|---|
+| `main.py` | CLI、主循环、触发判定、`state.json` 去重、管理员日志 |
+| `pipeline.py` | 编排一次运行：拉数据 → 上下文 → 风险 → LLM → 拼消息 → 发送 |
+| `report.py` | 纯函数：渲染上下文、任务归一化、风险判定、消息文本、分条 |
+| `qq.py` | OneBot 调用、名称解析、成员匹配、推送 `httpServers` |
+| `feishu.py` | 飞书全表读入内存（复用 `ThirdParty/`，不落盘） |
+| `config.py` | JSON → dict，默认值 + 必填校验（12 项） |
+| `clock.py` | SNTP 校时 + `monotonic` 推进 |
 
-> 当前是**骨架**：契约、签名与文档齐备，函数体为 `NotImplementedError`。
+> 当前是**骨架**：契约与签名齐备，函数体为 `NotImplementedError`（标注里程碑）。
+> 数据在模块间用 dict / list 传递，没有 dataclass 层、没有 Protocol、没有依赖注入容器。
 
 ---
 
@@ -120,20 +112,25 @@ cp config_example.json config.json
 
 | 字段 | 说明 |
 |---|---|
-| `napcat.http_server.token` | OneBot HTTP 鉴权 token，自己生成一串随机值 |
-| `napcat.webui.login_hash` | NapCat WebUI 登录 hash，仅 `--provision` 使用 |
-| `napcat.connect.host` | 程序连 NapCat 的地址（同机 `127.0.0.1`，跨机填对方 IP） |
-| `targets[].name` | 目标群名或群号 |
-| `admin[].id` | 管理员 QQ 号（收运行日志） |
-| `llm.api_key` / `base_url` / `model_id` | 任意 OpenAI 兼容接口 |
+| `times` | 触发时间数组（UTC+8），如 `["09:00", "18:00"]` |
+| `state_path` | 去重状态文件，默认 `state.json` |
+| `napcat.api` | 程序连 NapCat 的地址（同机 `127.0.0.1:3000`，跨机填对方 IP） |
+| `napcat.token` | OneBot HTTP 鉴权 token，自己生成一串随机值 |
+| `napcat.webui` / `webui_hash` | NapCat WebUI 地址与登录 hash，仅 `--provision` 使用 |
+| `target.group` | 目标群，群名或群号 |
+| `admin` | 管理员 QQ 号（收运行日志） |
 | `feishu.config_path` | 飞书导出配置的路径（含 `personal_base_token`，**不要提交**） |
+| `feishu.task_table` | 判定风险用的任务表名，默认 `研发进展总表` |
+| `llm.api_key` / `base_url` / `model` | 任意 OpenAI 兼容接口 |
+| `prompt.*` | 人设、语气、输出格式、任务提示 |
+| `risk.near_days` / `idle_days` / `aliases` | 临近天数、久未更新天数、姓名→QQ 手工映射 |
 
-> `config.json` 已在 `.gitignore` 中；也支持环境变量覆盖：
-> `QQBOT_LLM_API_KEY`、`QQBOT_NAPCAT_TOKEN`。
+> 其余参数（30 秒容差、5 秒轮询、单条 800 字、重试次数）都是代码里的常量，不进配置。
+> `config.json` 已在 `.gitignore` 中。
 
 ### 3. NapCat 端
 
-`napcat.http_server` 是 NapCat `network.httpServers[]` 的完整镜像，程序会把它推送过去：
+`--provision` 会把下面这段写进 NapCat 的 `network.httpServers[]`，并回读校验：
 
 ```json
 {
@@ -144,7 +141,7 @@ cp config_example.json config.json
   "enableCors": true,
   "enableWebsocket": false,
   "messagePostFormat": "array",
-  "token": "<与 config.json 一致>",
+  "token": "<取自 config.json 的 napcat.token>",
   "debug": false
 }
 ```
@@ -160,10 +157,10 @@ python main.py --check       # 校时 / 登录 / 目标解析 / 群成员
 python main.py            # 常驻：首次启动先跑一次，之后按时间表触发
 python main.py --once     # 立即跑一次（真实发送）
 python main.py --check    # 体检
-python selftest.py        # 无网络自测（标准库 unittest）
+python -m unittest        # 无网络自测（纯函数模块）
 ```
 
-> 0.1 没有 `--dry-run`，空跑请直接调 `pipeline.collect()`。
+> 0.1 没有 `--dry-run`，空跑请直接调 `pipeline.build_messages()`。
 
 > 代码文件**平铺在仓库根目录**，没有包目录，所以入口是 `python main.py`，
 > 不是 `python -m qqbot`。
@@ -174,17 +171,15 @@ python selftest.py        # 无网络自测（标准库 unittest）
 
 ```text
 config.json
-├── schedule      触发时间（UTC+8）、容差、轮询间隔、首启补跑
-├── time_sync     NTP 服务器、超时、重同步周期、HTTP 兜底
-├── napcat        OneBot HTTP 服务端配置、客户端连接参数、WebUI
-├── targets       通报目的地（群 / 好友）
-├── admin         日志目的地
-├── feishu        导出配置路径、表格名、渲染上限
-├── llm           api_key / base_url / model_id / 温度 / 重试
-├── prompt        人设、语言风格、输出格式、任务提示
-├── risk          临近天数、久未更新天数、姓名→QQ 手工映射
-├── send          单条字数上限、发送间隔、是否压平 Markdown
-└── logging       日志级别、合并周期、错误即时发送
+├── times          触发时间（UTC+8），如 ["09:00", "18:00"]
+├── state_path     去重状态文件路径
+├── napcat         api / token / webui / webui_hash
+├── target         目标群（群名或群号）
+├── admin          管理员 QQ（收运行日志）
+├── feishu         导出配置路径、任务表名
+├── llm            api_key / base_url / model / temperature / max_tokens
+├── prompt         persona / style / output_format / task_hint
+└── risk           near_days / idle_days / aliases
 ```
 
 完整的字段说明与默认值见 [`config_example.json`](config_example.json)。

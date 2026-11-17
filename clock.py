@@ -1,69 +1,53 @@
-"""时间基准：NTP 主、HTTP `Date` 兜底、系统时钟兜底。
+"""时间基准：NTP 校时一次，之后用 monotonic 推进。
 
-I/O 模块（只碰网络），但对外只暴露 Clock 接口（models.Clock）。
+为什么不直接用 `time.time()`：系统时钟可能被 NTP/人工调整，会让触发点漂移。
+为什么只校一次：进程跑一天，monotonic 漂移不到 1 秒，而容差是 30 秒。
 
-关键设计（PLAN §5.1）：
-  - 基准用 monotonic() 推进，系统时钟被改也不会让触发点漂移；
-  - now() 永远返回带 UTC+8 时区的 datetime，与服务器本地时区无关。
+`now()` 永远返回 **UTC+8** 带时区的 datetime，与服务器本地时区无关。
 """
 
 from __future__ import annotations
 
-import datetime as _dt
+import datetime as dt
+import socket
+import struct
 
-from models import Clock
+UTC8 = dt.timezone(dt.timedelta(hours=8))
+
+NTP_SERVERS = (
+    "ntp.aliyun.com",
+    "ntp.tencent.com",
+    "cn.pool.ntp.org",
+    "time.cloudflare.com",
+    "pool.ntp.org",
+)
+NTP_TIMEOUT = 3
+NTP_EPOCH_OFFSET = 2208988800          # 1900-01-01 → 1970-01-01
 
 
-UTC8 = _dt.timezone(_dt.timedelta(hours=8))
+class Clock:
+    """`sync()` 之后才能用 `now()`。"""
 
+    def __init__(self, servers: tuple[str, ...] = NTP_SERVERS) -> None:
+        self._servers = servers
+        self._base_epoch = 0.0          # 校时得到的真实 epoch 秒
+        self._base_mono = 0.0           # 校时那一刻的 monotonic
+        self.source = ""                # "ntp://host" / "system"
 
-class NtpClock(Clock):
-    """SNTP 校时 + monotonic 推进。
+    def sync(self) -> str:
+        """依次问 NTP，第一个成功就用它；全失败抛 RuntimeError。
 
-    TODO M1：
-      1. `socket` + `struct` 手写 SNTP（零依赖），UDP 123，超时 `ntp_timeout_seconds`；
-      2. 校验 stratum != 0、长度 ≥ 48、transmit 时间戳非 0（防 Kiss-o'-Death）；
-      3. 依次尝试 `ntp_servers`，全失败 → HTTP `Date` 响应头；
-      4. 记录 `base_epoch` 与 `base_monotonic`，之后按 monotonic 推算；
-      5. 每 `resync_minutes` 重校一次，|offset| > 1s 打日志。
-    """
+        TODO M1：socket + struct 手写 SNTP（零依赖）：
+          - 发 48 字节请求，`0x1B` 打头；
+          - 校验 len >= 48、stratum != 0、transmit 时间戳非 0（防 Kiss-o'-Death）；
+          - 偏差 = ((t2-t1) + (t3-t4)) / 2，这里用返回的 transmit 时间即可；
+          - 成功后记 `_base_epoch` / `_base_mono = time.monotonic()`。
+        """
+        raise NotImplementedError("TODO M1: SNTP 校时")
 
-    def __init__(self, time_sync: object) -> None:
-        self._cfg = time_sync
-        self._base_epoch: float = 0.0
-        self._base_monotonic: float = 0.0
-        self._source: str = "unset"
-
-    # ---- Clock 接口 -----------------------------------------------------
-
-    def now(self) -> _dt.datetime:
+    def now(self) -> dt.datetime:
+        """UTC+8 的当前时间。未 sync 直接抛 RuntimeError。"""
         raise NotImplementedError("TODO M1: now()")
 
-    def today(self) -> _dt.date:
+    def today(self) -> dt.date:
         raise NotImplementedError("TODO M1: today()")
-
-    # ---- 内部 -----------------------------------------------------------
-
-    def resync(self) -> float:
-        """重新校时，返回本次 offset（秒）。失败抛 StageError("clock", ...)。"""
-        raise NotImplementedError("TODO M1: resync()")
-
-    @property
-    def source(self) -> str:
-        """本次基准来自哪里：`ntp://host` / `http://...` / `system`。"""
-        return self._source
-
-
-class SystemClock(Clock):
-    """降级实现，仅当 `time_sync.mode == "system"` 或 `on_total_failure == "system"` 时使用。"""
-
-    def now(self) -> _dt.datetime:
-        raise NotImplementedError("TODO M1: 系统时钟")
-
-    def today(self) -> _dt.date:
-        raise NotImplementedError("TODO M1: 系统时钟")
-
-
-def build_clock(time_sync: object) -> Clock:
-    """按配置挑一个实现。"""
-    raise NotImplementedError("TODO M1: build_clock()")
