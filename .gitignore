@@ -1,0 +1,39 @@
+# ---- 私密配置（含 token / key / QQ 号）----
+config.json
+
+# ---- 内部方案（含服务器地址、WebUI token、机器人 QQ）----
+PLAN.md
+
+# ---- 第三方代码与含密钥的飞书导出配置 ----
+ThirdParty/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- 运行时产物 ----
+logs/
+*.log
+exports/
+*.tar.gz
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

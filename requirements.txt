@@ -1,0 +1,10 @@
+# 运行时依赖（Python >= 3.10）
+#
+#   python -m pip install -r requirements.txt
+#
+# smolagents 用本地 checkout（ThirdParty/smolagents），也可改成 PyPI 版本：
+#   smolagents>=1.26
+# 注意：第三方 CLI 工具会顺带带出大量可选依赖，这里只装接 API 模型的最小集。
+requests>=2.31
+smolagents>=1.26
+openai>=1.58

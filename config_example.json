@@ -1,0 +1,116 @@
+{
+  "_readme": "配置模板。复制为 config.json 后填入真实值；config.json 已在 .gitignore 中，不会被提交。",
+
+  "schedule": {
+    "_help": "UTC+8 触发时间，支持 HH:MM 或 HH:MM:SS；每个时间点每天只触发一次",
+    "utc8_times": ["09:00", "18:00"],
+    "tolerance_seconds": 30,
+    "poll_interval_seconds": 5,
+    "run_once_on_start": true,
+    "suppress_after_run_seconds": 120
+  },
+
+  "time_sync": {
+    "_help": "时间基准取自 NTP，而不是系统时钟；NTP 全挂时可用 HTTPS Date 兜底",
+    "mode": "ntp",
+    "ntp_servers": [
+      "ntp.aliyun.com",
+      "cn.pool.ntp.org",
+      "time.cloudflare.com",
+      "ntp.tencent.com",
+      "pool.ntp.org"
+    ],
+    "ntp_timeout_seconds": 3,
+    "resync_minutes": 30,
+    "http_fallback": true,
+    "http_fallback_urls": ["https://www.baidu.com", "https://open.feishu.cn"],
+    "on_total_failure": "skip"
+  },
+
+  "napcat": {
+    "_help": "http_server 是 NapCat network.httpServers[] 的完整镜像，由 python -m qqbot --provision 推送",
+    "http_server": {
+      "name": "qqbot",
+      "enable": true,
+      "host": "0.0.0.0",
+      "port": 3000,
+      "enableCors": true,
+      "enableWebsocket": false,
+      "messagePostFormat": "array",
+      "token": "CHANGE_ME_NAPCAT_TOKEN",
+      "debug": false
+    },
+    "connect": {
+      "_help": "程序连 NapCat 的地址；api_base 非空则完全覆盖。同机填 127.0.0.1，跨机填 NapCat 所在主机",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "api_base": ""
+    },
+    "webui": {
+      "_help": "仅 --provision 用：NapCat WebUI 地址与登录 hash",
+      "base_url": "http://127.0.0.1:6099",
+      "login_hash": "CHANGE_ME_WEBUI_LOGIN_HASH"
+    },
+    "timeout_seconds": 15,
+    "retries": 3,
+    "retry_backoff_seconds": 1.0,
+    "group_aliases": {
+      "示例群": "123456789"
+    }
+  },
+
+  "targets": [
+    { "type": "group", "name": "示例群" }
+  ],
+
+  "admin": [
+    { "type": "friend", "name": "管理员昵称", "id": 123456789 }
+  ],
+
+  "feishu": {
+    "_help": "config_path 指向含 app_token / personal_base_token 的导出配置（不要提交到仓库）",
+    "config_path": "ThirdParty/feishu_export/feishu_export_config.json",
+    "task_table_name": "研发进展总表",
+    "max_cell_chars": 300,
+    "max_total_chars": 120000
+  },
+
+  "llm": {
+    "api_key": "sk-CHANGE_ME",
+    "base_url": "https://api.deepseek.com/v1",
+    "model_id": "deepseek-chat",
+    "temperature": 0.7,
+    "max_tokens": 4096,
+    "request_timeout_seconds": 180,
+    "retries": 2
+  },
+
+  "prompt": {
+    "persona": "你是某机器人战队的项目助理，说话直接，不吹捧、不堆形容词。",
+    "style": "中文，技术口吻，短句。不使用 emoji，不使用表情符号，不写客套话。面对的是战队队员，用平级口吻；该点谁拖了进度就直接点。",
+    "output_format": "输出 3~6 条彼此独立的要点，每条单独一行，不加序号、不加项目符号、不加小标题。每条 20~60 字。可以点任务名和数字，但数字必须来自表格；已完成的任务要点名。允许给出判断和建议。",
+    "task_hint": "基于下面给出的全部表格数据，概括当前整体状态：先说完成情况，再说风险与阻塞，可以给出判断和建议。不要编造数据，不要复述表格结构。"
+  },
+
+  "risk": {
+    "_help": "near_days：距截止 N 天内视为临近；idle_days：该负责人最近一次更新超过 N 天视为久未更新",
+    "near_days": 5,
+    "idle_days": 15,
+    "owner_aliases": {
+      "负责人姓名": 123456789
+    }
+  },
+
+  "send": {
+    "max_chars_per_message": 800,
+    "interval_ms": 1500,
+    "strip_markdown": true
+  },
+
+  "logging": {
+    "level": "INFO",
+    "batch_seconds": 10,
+    "flush_on_error": true,
+    "max_chars_per_report": 3000
+  }
+}
