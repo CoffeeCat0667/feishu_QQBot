@@ -18,7 +18,7 @@
 
 ## 特性
 
-- **NTP 校时**：触发时间取自网络时间，不信任系统时钟；NTP 全挂时降级 HTTPS `Date` 头。
+- **NTP 校时**：触发时间取自 NTP 网络时间，不依赖系统时区。
 - **内存导出**：飞书全表读进内存后直接组装上下文，**不落盘**。
 - **定时触发**：以 `config.json` 中的 UTC+8 时间数组为基准，误差窗口 ±30 秒，每个时间点每天只触发一次。
 - **LLM 生成**：人设、语气、条数、格式全部由配置驱动，不写死在代码里。
@@ -116,7 +116,6 @@ cp config_example.json config.json
 | `state_path` | 去重状态文件，默认 `state.json` |
 | `napcat.api` | 程序连 NapCat 的地址（同机 `127.0.0.1:3000`，跨机填对方 IP） |
 | `napcat.token` | OneBot HTTP 鉴权 token，自己生成一串随机值 |
-| `napcat.webui` / `webui_hash` | NapCat WebUI 地址与登录 hash，仅 `--provision` 使用 |
 | `target.group` | 目标群，群名或群号 |
 | `admin` | 管理员 QQ 号（收运行日志） |
 | `feishu.config_path` | 飞书导出配置的路径（含 `personal_base_token`，**不要提交**） |
@@ -130,25 +129,10 @@ cp config_example.json config.json
 
 ### 3. NapCat 端
 
-`--provision` 会把下面这段写进 NapCat 的 `network.httpServers[]`，并回读校验：
-
-```json
-{
-  "name": "qqbot",
-  "enable": true,
-  "host": "0.0.0.0",
-  "port": 3000,
-  "enableCors": true,
-  "enableWebsocket": false,
-  "messagePostFormat": "array",
-  "token": "<取自 config.json 的 napcat.token>",
-  "debug": false
-}
-```
+在 NapCat 中启用 OneBot HTTP 服务，并将其地址和 token 填入 `config.json` 的 `napcat.api` 与 `napcat.token`。配置检查命令：
 
 ```bash
-python main.py --provision   # 推送并回读校验
-python main.py --check       # 校时 / 登录 / 目标解析 / 群成员
+python main.py --check
 ```
 
 ### 4. 运行（规划中的命令）
@@ -173,7 +157,7 @@ python -m unittest        # 无网络自测（纯函数模块）
 config.json
 ├── times          触发时间（UTC+8），如 ["09:00", "18:00"]
 ├── state_path     去重状态文件路径
-├── napcat         api / token / webui / webui_hash
+├── napcat         api / token
 ├── target         目标群（群名或群号）
 ├── admin          管理员 QQ（收运行日志）
 ├── feishu         导出配置路径、任务表名

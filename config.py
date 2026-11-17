@@ -1,7 +1,7 @@
 """配置：JSON → dict，默认值 + 必填校验。
 
 只有 12 项真会变的东西，其余一律写死在代码里：
-触发时间、state 路径、NapCat 地址/token/WebUI、目标群、管理员 QQ、
+触发时间、state 路径、NapCat 地址/token、目标群、管理员 QQ、
 飞书配置路径与任务表名、LLM 三件套、提示词、风险天数与别名。
 
 `config.json` 含密钥，已在 `.gitignore` 中；模板见 `config_example.json`。
@@ -18,8 +18,6 @@ DEFAULTS: dict = {
     "napcat": {
         "api": "http://127.0.0.1:3000",
         "token": "",
-        "webui": "http://127.0.0.1:6099",
-        "webui_hash": "",
     },
     "target": {"group": ""},
     "admin": 0,
@@ -57,8 +55,3 @@ def load(path: str | Path = "config.json") -> dict:
     `target.group` 可以是群号或群名，两者都非空才算配置完整。
     """
     raise NotImplementedError("TODO M1: load()")
-
-
-def dig(cfg: dict, dotted: str, default=None):
-    """`dig(cfg, "llm.model")` → 嵌套取值，取不到返回 default。"""
-    raise NotImplementedError("TODO M1: dig()")

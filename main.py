@@ -1,6 +1,5 @@
 """入口：CLI、主循环、触发判定、state.json、管理员日志。
 
-    python main.py --provision   # 推送 NapCat httpServers 并回读校验
     python main.py --check       # 体检：校时 / 飞书 / NapCat / 群与成员
     python main.py --once        # 立即跑一次（真实发送）
     python main.py               # 常驻：首启跑一次，之后按 times 触发
@@ -93,10 +92,6 @@ def cmd_check(cfg: dict) -> int:
     raise NotImplementedError("TODO M1: --check")
 
 
-def cmd_provision(cfg: dict) -> int:
-    raise NotImplementedError("TODO M1: --provision")
-
-
 def run_and_report(cfg: dict, clk: clock_mod.Clock) -> bool:
     """跑一轮 + 汇总上报。前置失败时也上报 ERROR，不抛给调用方。"""
     raise NotImplementedError("TODO M3: 跑一轮并上报")
@@ -114,7 +109,6 @@ def service(cfg: dict) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="main.py", description="QQ 定时进展通报机器人")
     p.add_argument("--config", default="config.json")
-    p.add_argument("--provision", action="store_true", help="推送 NapCat httpServers")
     p.add_argument("--check", action="store_true", help="体检")
     p.add_argument("--once", action="store_true", help="立即跑一次（真实发送）")
     return p
@@ -125,8 +119,6 @@ def main(argv: list[str] | None = None) -> int:
     cfg = config_mod.load(os.environ.get("QQBOT_CONFIG", args.config))
     setup_logging()
 
-    if args.provision:
-        return cmd_provision(cfg)
     if args.check:
         return cmd_check(cfg)
     if args.once:

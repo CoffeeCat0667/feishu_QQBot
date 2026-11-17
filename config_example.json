@@ -7,9 +7,7 @@
 
   "napcat": {
     "api": "http://127.0.0.1:3000",
-    "token": "CHANGE_ME_ONEBOT_TOKEN",
-    "webui": "http://127.0.0.1:6099",
-    "webui_hash": "CHANGE_ME_WEBUI_LOGIN_HASH"
+    "token": "CHANGE_ME_ONEBOT_TOKEN"
   },
 
   "target": {

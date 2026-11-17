@@ -1,4 +1,4 @@
-"""NapCat / OneBot v11：发消息、名称解析、群成员匹配、推送 httpServers。
+"""NapCat / OneBot v11：发消息、名称解析与群成员匹配。
 
 协议：`POST {api}/{action}`，JSON body 即参数，头 `Authorization: Bearer {token}`。
 消息用 array 段格式：
@@ -8,8 +8,7 @@
 
 实测坑（PLAN §11）：
   - `get_group_list` 不完整（2 个群只返回 1 个）→ 必须用 `get_recent_contact` 兜底；
-  - token 为空时 NapCat 不校验来源 —— 不要留空；
-  - WebUI 的 `GetConfig` 必须 POST，`SetConfig` 的 `config` 必须传 JSON 字符串。
+  - token 为空时 NapCat 不校验来源 —— 不要留空。
 """
 
 from __future__ import annotations
@@ -17,8 +16,6 @@ from __future__ import annotations
 import requests
 
 TIMEOUT = 15
-PROVISION_HOST = "0.0.0.0"
-PROVISION_PORT = 3000
 
 
 # --------------------------------------------------------------------------
@@ -68,20 +65,3 @@ def match_qq(name: str, group_id: int, cfg: dict) -> int | None:
 def send(cfg: dict, target: str, text: str, at: int | None = None) -> int:
     """`target` 是群号或 "private:<qq>"。返回 message_id。"""
     raise NotImplementedError("TODO M3: 发送")
-
-
-# --------------------------------------------------------------------------
-# WebUI：推送 napcat.httpServers
-# --------------------------------------------------------------------------
-
-def provision(cfg: dict) -> dict:
-    """把下面这段推到 NapCat 的 `network.httpServers[]` 并回读校验。
-
-        {"name": "qqbot", "enable": true, "host": "0.0.0.0", "port": 3000,
-         "enableCors": true, "enableWebsocket": false,
-         "messagePostFormat": "array", "token": <cfg.napcat.token>, "debug": false}
-
-    TODO M1：登录拿 Credential → POST GetConfig → 按 name 覆盖 → SetConfig（传字符串）
-    → 再 GetConfig 逐字段比对。一次性操作，NapCat 配置已验证过，20 行够。
-    """
-    raise NotImplementedError("TODO M1: 推送 httpServers")
