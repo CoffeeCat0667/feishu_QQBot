@@ -30,6 +30,8 @@ logs/
 *.log
 exports/
 *.tar.gz
+state.json
+state.json.tmp
 
 # ---- 编辑器 / 系统 ----
 .vscode/

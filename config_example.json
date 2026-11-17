@@ -7,7 +7,8 @@
     "tolerance_seconds": 30,
     "poll_interval_seconds": 5,
     "run_once_on_start": true,
-    "suppress_after_run_seconds": 120
+    "suppress_after_run_seconds": 120,
+    "state_path": "state.json"
   },
 
   "time_sync": {

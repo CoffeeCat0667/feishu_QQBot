@@ -1,6 +1,6 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Status](https://img.shields.io/badge/status-design%20stage-orange.svg)]()
+[![Status](https://img.shields.io/badge/status-skeleton-yellow.svg)]()
 [![OneBot](https://img.shields.io/badge/OneBot-v11-ff69b4.svg)](https://github.com/botuniverse/onebot-11)
 [![NapCat](https://img.shields.io/badge/NapCat-QQ-blueviolet.svg)](https://github.com/NapNeko/NapCatQQ)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey.svg)]()
@@ -10,7 +10,8 @@
 
 定时把**飞书多维表格**的项目数据拉进内存，交给 LLM 生成一段**进展通报**，再通过 **NapCat（OneBot v11）** 分条发送到 QQ 群；同时把运行日志私聊给管理员。
 
-> **状态：设计阶段。** 本仓库当前只包含配置模板、许可证与文档，运行代码尚未提交。
+> **状态：骨架阶段。** 模块划分、接口契约与文档已就位，函数体为 `NotImplementedError`
+> （标注了所属里程碑 M1–M5），实现按里程碑逐步补齐。
 > 设计文档 `PLAN.md`、真实配置 `config.json` 与 `ThirdParty/` 均被 `.gitignore` 排除。
 
 ---
@@ -46,6 +47,31 @@ flowchart LR
 ```
 
 顺序固定：**标题 → 全局要点 → 按人 @ 块**。
+
+### 代码结构
+
+代码文件平铺在仓库根目录，**没有包目录**：
+
+| 文件 | 类型 | 职责 |
+|---|---|---|
+| `main.py` | 编排 | CLI 与主循环 |
+| `pipeline.py` | 编排 | 单次运行；唯一同时接触纯模块与 I/O 模块的文件 |
+| `models.py` | 纯 | 数据模型、4 个 `Protocol`、`Deps`、`StageError` |
+| `config.py` | 纯 | 配置加载与校验 |
+| `clock.py` | I/O | NTP 校时，`monotonic` 基准 |
+| `scheduler.py` | 纯 | 触发判定与 `state.json` 去重 |
+| `feishu_source.py` | I/O | 飞书全表读入内存 |
+| `render.py` | 纯 | 表格 → Markdown 上下文 |
+| `analysis.py` | 纯 | 任务归一化与危险判定 |
+| `blocks.py` | 纯 | 标题与风险块排版 |
+| `agent.py` | I/O | LLM 生成全局要点 |
+| `splitter.py` | 纯 | 分条与 Markdown 压平 |
+| `napcat.py` | I/O | OneBot HTTP、名称解析、成员匹配 |
+| `napcat_admin.py` | I/O | 推送 NapCat `httpServers` |
+| `reporter.py` | I/O | 日志 → 管理员 |
+| `selftest.py` | 测试 | `unittest` 发现入口 |
+
+> 当前是**骨架**：契约、签名与文档齐备，函数体为 `NotImplementedError`。
 
 ---
 
@@ -124,17 +150,23 @@ cp config_example.json config.json
 ```
 
 ```bash
-python -m qqbot --provision   # 推送并回读校验
-python -m qqbot --check       # 校时 / 登录 / 目标解析 / 群成员
+python main.py --provision   # 推送并回读校验
+python main.py --check       # 校时 / 登录 / 目标解析 / 群成员
 ```
 
 ### 4. 运行（规划中的命令）
 
 ```bash
-python -m qqbot            # 常驻：首次启动先跑一次，之后按时间表触发
-python -m qqbot --once     # 立即跑一次
-python -m qqbot --dry-run  # 只打印，不发送
+python main.py            # 常驻：首次启动先跑一次，之后按时间表触发
+python main.py --once     # 立即跑一次（真实发送）
+python main.py --check    # 体检
+python selftest.py        # 无网络自测（标准库 unittest）
 ```
+
+> 0.1 没有 `--dry-run`，空跑请直接调 `pipeline.collect()`。
+
+> 代码文件**平铺在仓库根目录**，没有包目录，所以入口是 `python main.py`，
+> 不是 `python -m qqbot`。
 
 ---
 
