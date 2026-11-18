@@ -1,9 +1,10 @@
 {
-  "_readme": "复制为 config.json 后填真实值。config.json 已在 .gitignore 中，不要提交。",
+  "_readme": "复制为 Config/config.json 后填真实值。该文件已在 .gitignore 中，不要提交。",
   "_schema": "只有这些项会变；容差 30s、轮询 5s、单条 800 字等常量写在代码里。",
 
   "times": ["09:00", "18:00"],
   "state_path": "state.json",
+  "ntp_servers": ["ntp.aliyun.com", "ntp.tencent.com"],
 
   "napcat": {
     "api": "http://127.0.0.1:3000",
@@ -17,8 +18,7 @@
   "admin": 123456789,
 
   "feishu": {
-    "config_path": "ThirdParty/feishu_export/feishu_export_config.json",
-    "task_table": "研发进展总表"
+    "config_path": "ThirdParty/feishu_export/feishu_export_config.json"
   },
 
   "llm": {
@@ -41,6 +41,9 @@
     "idle_days": 15,
     "aliases": {
       "负责人姓名": 123456789
+    },
+    "name_map": {
+      "NapCat群昵称": "真实姓名"
     }
   }
 }
